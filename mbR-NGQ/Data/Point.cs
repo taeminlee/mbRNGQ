@@ -49,6 +49,7 @@ namespace RTree
         /// </summary>
         internal float[] coordinates;
 
+        public int id;
 
         /// <summary>
         /// Constructor.

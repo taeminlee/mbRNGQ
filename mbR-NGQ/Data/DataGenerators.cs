@@ -22,6 +22,7 @@ namespace mbR_NGQ
                 byte category = (byte)rand.Next(Config.m);
 
                 points[i] = new Point(x, y, category);
+                points[i].id = i;
             }
 
             return points;

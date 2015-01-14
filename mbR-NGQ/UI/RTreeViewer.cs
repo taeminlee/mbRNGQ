@@ -47,18 +47,18 @@ namespace mbR_NGQ
             Random rand = new Random();
             Point queryPoint = null;
 
-            for(int i = 0; i < 100; i++)
+            /*for(int i = 0; i < 100; i++)
             {
                 float x = (float)(rand.NextDouble() * (Config.maxX - Config.minX) + Config.minX);
                 float y = (float)(rand.NextDouble() * (Config.maxY - Config.minY) + Config.minY);
                 queryPoint = new Point((float)x, (float)y, 0);
                 nearGroups = rTree.NearestGroup(queryPoint);
-            }
-            /*
+            }*/
+            
             float x = (float)(rand.NextDouble() * (Config.maxX - Config.minX) + Config.minX);
             float y = (float)(rand.NextDouble() * (Config.maxY - Config.minY) + Config.minY);
-            Point queryPoint = new Point((float)x, (float)y, 0);
-            nearGroups = rTree.NearestGroup(queryPoint);*/
+            queryPoint = new Point((float)x, (float)y, 0);
+            nearGroups = rTree.NearestGroup(queryPoint);
 
             sw.Stop();
             System.Diagnostics.Debug.WriteLine(sw.ElapsedMilliseconds);
