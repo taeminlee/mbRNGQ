@@ -27,7 +27,7 @@ namespace mbR_NGQ
 
             DataSet dataSet = new DataSet();
             dataSet.DataGenerator = new UniformGenerator();
-            dataSet.DataGeneration(Config.n);
+            dataSet.DataGeneration(Config.n * Config.m);
 
             System.Diagnostics.Debug.WriteLine("Data Generation End");
             System.Diagnostics.Debug.WriteLine("RTree Insert Start");
@@ -47,25 +47,26 @@ namespace mbR_NGQ
             Random rand = new Random();
             Point queryPoint = null;
 
-            /*for(int i = 0; i < 100; i++)
+            for(int i = 0; i < 100; i++)
             {
                 float x = (float)(rand.NextDouble() * (Config.maxX - Config.minX) + Config.minX);
                 float y = (float)(rand.NextDouble() * (Config.maxY - Config.minY) + Config.minY);
                 queryPoint = new Point((float)x, (float)y, 0);
                 nearGroups = rTree.NearestGroup(queryPoint);
-            }*/
+                System.Diagnostics.Debug.Assert(rTree.CheckNearGroup(queryPoint, nearGroups) == true);
+            }
             
-            float x = (float)(rand.NextDouble() * (Config.maxX - Config.minX) + Config.minX);
+            /*float x = (float)(rand.NextDouble() * (Config.maxX - Config.minX) + Config.minX);
             float y = (float)(rand.NextDouble() * (Config.maxY - Config.minY) + Config.minY);
             queryPoint = new Point((float)x, (float)y, 0);
-            nearGroups = rTree.NearestGroup(queryPoint);
+            nearGroups = rTree.NearestGroup(queryPoint);*/
 
             sw.Stop();
             System.Diagnostics.Debug.WriteLine(sw.ElapsedMilliseconds);
 
             System.Diagnostics.Debug.WriteLine("RTree Insert End");
 
-            rTreePanel1.RTree = rTree;
+            /*rTreePanel1.RTree = rTree;*/
             rTreePanel1.NearGroups = nearGroups;
             rTreePanel1.QueryPoint = queryPoint;
             rTreePanel1.InitRTree();

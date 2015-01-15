@@ -9,9 +9,9 @@ namespace mbR_NGQ
     public static class Config
     {
         public static int m = 2; // number of category
-        public static int n = 10; // number of data points, MAX 1M
+        public static int n = 6; // number of data points, MAX 1M
 
-        public static int k = 3; // number of Nearest Group
+        public static int k = 10; // number of Nearest Group
 
         public static float minX = 0;
         public static float maxX = 100;

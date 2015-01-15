@@ -41,6 +41,7 @@ namespace RTree
         internal int[] ids = null;
         internal int level;
         internal int entryCount;
+        internal bool visited = false;
 
         public override string ToString()
         {
