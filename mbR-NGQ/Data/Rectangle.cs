@@ -19,6 +19,7 @@
 // Ported to C# By Dror Gluska, April 9th, 2009
 
 using System;
+using System.Data.SqlTypes;
 using System.Text;
 
 namespace RTree
@@ -47,6 +48,14 @@ namespace RTree
          * array containing the maximum value for each dimension; ie { max(x), max(y) }
          */
         internal float[] min;
+
+        private object element;
+
+        public object Element
+        {
+            get { return element; }
+            set { element = value; }
+        }
 
         /**
          * Constructor.
@@ -81,6 +90,35 @@ namespace RTree
             this.max = new float[DIMENSIONS];
 
             set(min, max);
+        }
+
+        public Rectangle(Node<Point> childNode)
+        {
+            float[] min = childNode.mbr.min;
+            float[] max = childNode.mbr.max;
+
+            if (min.Length != DIMENSIONS || max.Length != DIMENSIONS)
+            {
+                throw new Exception("Error in Rectangle constructor: " +
+                          "min and max arrays must be of length " + DIMENSIONS);
+            }
+
+            this.min = new float[DIMENSIONS];
+            this.max = new float[DIMENSIONS];
+
+            set(min, max);
+
+            this.element = childNode;
+        }
+
+        public Rectangle(Point point)
+        {
+            min = new float[DIMENSIONS];
+            max = new float[DIMENSIONS];
+
+            set(point.coordinates[0], point.coordinates[1], point.coordinates[0], point.coordinates[1]);
+
+            this.element = point;
         }
 
         /**

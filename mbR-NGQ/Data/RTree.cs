@@ -42,7 +42,7 @@ namespace RTree
     /// This is a lightweight RTree implementation, specifically designed 
     /// for the following features (in order of importance): 
     ///
-    /// Fast intersection query performance. To achieve this, the RTree 
+    /// Fast intersection queryPoint performance. To achieve this, the RTree 
     /// uses only main memory to store entries. Obviously this will only improve
     /// performance if there is enough physical memory to avoid paging.
     /// Low memory requirements.
@@ -455,14 +455,14 @@ namespace RTree
 
         public class MGroup<T> : PriorityQueueNode, IComparable
         {
-            private object[] objs;
+            private object[] _elems;
             private double minDist;
             private double maxDist;
 
             public override string ToString()
             {
                 string str = "Leaf : " + IsLeaf().ToString();
-                foreach (object obj in this.objs)
+                foreach (object obj in this._elems)
                 {
                     if (obj.GetType() == typeof (Node<T>))
                     {
@@ -487,10 +487,10 @@ namespace RTree
                     return 0;
             }
 
-            public object[] Objs
+            public object[] Elems
             {
-                get { return objs; }
-                set { objs = value; }
+                get { return _elems; }
+                set { _elems = value; }
             }
 
             public double MinDist
@@ -506,7 +506,7 @@ namespace RTree
             public int Count()
             {
                 int cnt = 0;
-                foreach (object obj in objs)
+                foreach (object obj in _elems)
                 {
                     if (obj != null)
                         cnt++;
@@ -517,7 +517,7 @@ namespace RTree
             public int NullCount()
             {
                 int cnt = 0;
-                foreach (object obj in objs)
+                foreach (object obj in _elems)
                 {
                     if (obj == null)
                         cnt++;
@@ -528,7 +528,7 @@ namespace RTree
             public int GetFirstNullIndex()
             {
                 int idx = 0;
-                foreach (object obj in objs)
+                foreach (object obj in _elems)
                 {
                     if (obj != null)
                         idx++;
@@ -540,15 +540,76 @@ namespace RTree
                 return -1;
             }
 
-            public MGroup(object[] objs)
+            public bool IsDictator()
             {
-                System.Diagnostics.Debug.Assert(objs.Length == Config.m);
-                this.objs = objs;
+                object lastObj = null;
+                foreach (object obj in this._elems)
+                {
+                    if (obj == null) return false;
+                    if (lastObj == null) lastObj = obj;
+                    else
+                    {
+                        if (lastObj != obj) return false;
+                    }
+                }
+                return true;
+            }
+
+            public Rectangle GetCombinationMBR(double delta, Point queryPoint)
+            {
+                
+                Rectangle mbr = new Rectangle(Config.minX, Config.minY, Config.maxX, Config.maxY);
+                mbr = UnionLocalDeltaMBR(mbr, queryPoint, delta);
+
+                foreach (Object obj in this._elems)
+                {
+                    if (obj == null)
+                        continue;
+                    else
+                    {
+                        if (obj.GetType() == typeof (Point))
+                        {
+                            mbr = UnionLocalDeltaMBR(mbr, (Point)obj, delta);
+                        }
+                        else if (obj.GetType() == typeof (Node<T>))
+                        {
+                            mbr = UnionLocalDeltaMBR(mbr, (Node<T>)obj, delta);
+                        }
+                    }
+                }
+                
+                return mbr;
+            }
+
+            private Rectangle UnionLocalDeltaMBR(Rectangle mbr, Point point, double delta)
+            {
+                mbr.min[0] = Math.Max(mbr.min[0], point.coordinates[0] - (float)delta);
+                mbr.min[1] = Math.Max(mbr.min[1], point.coordinates[1] - (float)delta);
+                mbr.max[0] = Math.Min(mbr.max[0], point.coordinates[0] + (float)delta);
+                mbr.max[1] = Math.Min(mbr.max[1], point.coordinates[1] + (float)delta);
+
+                return mbr;
+            }
+
+            private Rectangle UnionLocalDeltaMBR(Rectangle mbr, Node<T> node, double delta)
+            {
+                mbr.min[0] = Math.Max(mbr.min[0], node.mbr.min[0] - (float)delta);
+                mbr.min[1] = Math.Max(mbr.min[1], node.mbr.min[1] - (float)delta);
+                mbr.max[0] = Math.Min(mbr.max[0], node.mbr.max[0] + (float)delta);
+                mbr.max[1] = Math.Min(mbr.max[1], node.mbr.max[1] + (float)delta);
+
+                return mbr;
+            }
+
+            public MGroup(object[] _elems)
+            {
+                System.Diagnostics.Debug.Assert(_elems.Length == Config.m);
+                this._elems = _elems;
             }
 
             public bool IsLeaf()
             {
-                foreach (object obj in objs)
+                foreach (object obj in _elems)
                 {
                     if (obj == null) return false;
                     if (obj.GetType() != typeof(Point))
@@ -561,7 +622,7 @@ namespace RTree
 
             public bool IsInternal()
             {
-                foreach (object obj in objs)
+                foreach (object obj in _elems)
                 {
                     if (obj == null) return false;
                     if (obj.GetType() != typeof(Node<T>))
@@ -574,15 +635,24 @@ namespace RTree
 
             public bool IsAllSet()
             {
-                foreach(object obj in objs)
+                foreach(object obj in _elems)
                     if (obj == null) return false;
+                return true;
+            }
+
+            public bool IsBlank()
+            {
+                foreach (object obj in _elems)
+                {
+                    if (obj != null) return false;
+                }
                 return true;
             }
 
             public bool IsAllSame()
             {
                 object temp_obj = null;
-                foreach (object obj in objs)
+                foreach (object obj in _elems)
                     if (temp_obj == null) temp_obj = obj;
                     else if (temp_obj != obj) return false;
                 return true;
@@ -663,9 +733,9 @@ namespace RTree
             {
                 Rectangle r = null;
 
-                if (IsAllSame()) return ((Node<T>)objs[0]).mbr;
+                if (IsAllSame()) return ((Node<T>)_elems[0]).mbr;
 
-                foreach (var obj in objs)
+                foreach (var obj in _elems)
                 {
                     if (obj.GetType() == typeof(Node<T>))
                     {
@@ -703,20 +773,20 @@ namespace RTree
             {
                 double innerDist = 0;
                 double interDist = Config.maxX - Config.minX + Config.maxY - Config.minY;
-                for (int i = 0; i < objs.Length; i++)
+                for (int i = 0; i < _elems.Length; i++)
                 {
-                    for (int j = i + 1; j < objs.Length; j++)
+                    for (int j = i + 1; j < _elems.Length; j++)
                     {
-                        if (objs[i] == objs[j]) continue;
+                        if (_elems[i] == _elems[j]) continue;
 
-                        double ooDist = GetMinDist(objs[i], objs[j]);
+                        double ooDist = GetMinDist(_elems[i], _elems[j]);
                         if (innerDist < ooDist)
                         {
                             innerDist = ooDist;
                         }
                     }
 
-                    double qoDist = GetMinDist(q, objs[i]);
+                    double qoDist = GetMinDist(q, _elems[i]);
                     if (interDist > qoDist)
                     {
                         interDist = qoDist;
@@ -765,20 +835,22 @@ namespace RTree
             public RTree<T>.MGroup<T> Copy()
             {
                 RTree<T>.MGroup<T> newMGroup = new RTree<T>.MGroup<T>(new object[Config.m]);
-                for (int i = 0; i < this.objs.Length; i++)
+                for (int i = 0; i < this._elems.Length; i++)
                 {
-                    newMGroup.objs[i] = this.objs[i];
+                    newMGroup._elems[i] = this._elems[i];
                 }
                 return newMGroup;
             }
         }
 
         private double globalMaxDist;
-        private double theta;
+        private double delta;
         private int KCounter = 0;
         private List<MGroup<T>> candidateGroups;
         private Dictionary<object, List<MGroup<T>>> invertedCandidateGroups;
-        private MGroup<T>[] resultGroups; 
+        private MGroup<T>[] resultGroups;
+        private RTree<object>[] invertedElemRTrees;
+        private Dictionary<object, Rectangle> elemRecDic;
         private double[] thetaPool;
         private MGroup<T>[] thetaGroups;
         private List<object> objPool;
@@ -794,17 +866,20 @@ namespace RTree
             Node<T> rootNode = getNode(rootNodeId);
 
             globalMaxDist = new Point(Config.minX, Config.minY, 0).GetDist(new Point(Config.maxX, Config.maxY, 0));
-            theta = globalMaxDist;
+            delta = globalMaxDist;
             thetaPool = new double[Config.k];
             thetaGroups = new MGroup<T>[Config.k];
             candidateGroups = new List<MGroup<T>>();
             invertedCandidateGroups = new Dictionary<object, List<MGroup<T>>>();
+            elemRecDic = new Dictionary<object, Rectangle>();
             resultGroups = new MGroup<T>[Config.k];
             objPool = new List<object>();
+            invertedElemRTrees = new RTree<object>[Config.m];
             invertedObj = new List<object>[Config.m];
             for (int mIdx = 0; mIdx < Config.m; mIdx++)
             {
                 invertedObj[mIdx] = new List<object>();
+                invertedElemRTrees[mIdx] = new RTree<object>();
             }
             KCounter = 0;
             for (int i = 0; i < thetaPool.Length; i++)
@@ -823,9 +898,11 @@ namespace RTree
 
             bool allSet = true;
             MGroup<T> rootGroup = new MGroup<T>(new object[Config.m]);
+            Rectangle rootRec = new Rectangle(rootNode as Node<Point>);
             for (int idx = 0; idx < Config.m; idx++)
             {
-                rootGroup.Objs[idx] = rootNode;
+                rootGroup.Elems[idx] = rootNode;
+                invertedElemRTrees[idx].Add(rootRec, rootNode);
             }
             System.Diagnostics.Debug.Assert(allSet == true);
             candidateGroups.Add(rootGroup);
@@ -847,13 +924,17 @@ namespace RTree
 
         private void NearestGroup(Point q, Node<T> node)
         {
-            /*if (theta < candidateGroups[0].MaxDist)
-            {
-                theta = candidateGroups[0].MaxDist;
-            }*/
-            
             accessCount++;
             node.visited = true;
+
+            Rectangle rec = new Rectangle(node as Node<Point>);
+            for (int mIdx = 0; mIdx < Config.m; mIdx++)
+            {
+                if (node.bitArray[mIdx] == true)
+                {
+                    invertedElemRTrees[mIdx].Delete(rec, node);
+                }
+            }
 
             //1. Initialize Inverted List
             //       [NOT NOW]      which Sorted order by coordinate
@@ -865,156 +946,20 @@ namespace RTree
                 newInvertedObj[mIdx] = new List<object>();
             }
 
-            // Insert child nodes into inverted List
-            if (node.isLeaf() == false)
-            {
-                Node<T>[] nodes = new Node<T>[node.entryCount];
-                for (int i = 0; i < node.entryCount; i++)
-                {
-                    nodes[i] = NodeMap[node.ids[i]];
-                }
-                foreach (Node<T> childNode in nodes)
-                {
-                    if (childNode.mbr.distance(q) > theta) continue;
-                    bool allSet = true;
-                    for (int mIdx = 0; mIdx < Config.m; mIdx++)
-                    {
-                        if(childNode.bitArray[mIdx] == true)
-                            newInvertedObj[mIdx].Add(childNode);
-                        else
-                            allSet = false;
-                    }
-                    newObjPool.Add(childNode);
-                }
-            }
-            // Add points into inverted List
-            else if (node.isLeaf() == true)
-            {
-                T[] objs = new T[node.entryCount];
-                for (int i = 0; i < node.entryCount; i++)
-                {
-                    objs[i] = IdsToItems[node.ids[i]];
-                }
-                foreach (T obj in objs)
-                {
-                    System.Diagnostics.Debug.Assert(obj.GetType() == typeof(Point));
-                    if(obj.GetType() != typeof(Point)) continue;
+            InsertOpenElements(q, node, newInvertedObj, newObjPool);
 
-                    Point point = obj as Point;
-
-                    if (point.GetDist(q) > theta) continue;
-
-                    newInvertedObj[point.category].Add(point);
-                    newObjPool.Add(point);
-                }
-            }
-            
             // Make Combination Group (Computation Cost)
 
-            List<MGroup<T>> tempGroups = new List<MGroup<T>>();
+            MGroup<T>[] openGroups = invertedCandidateGroups[node].ToArray();
 
-            List<MGroup<T>> skipGroups = new List<MGroup<T>>();
-
-            List<MGroup<T>> duplicatedGroups = new List<MGroup<T>>();
-
-            foreach (MGroup<T> curGroup in invertedCandidateGroups[node])
+            foreach (MGroup<T> curGroup in openGroups)
             {
                 candidateGroups.Remove(curGroup);
-
-                bool skip = false;
-                MGroup<T> templateGroup = new MGroup<T>(new object[Config.m]);
-                for (int mIdx = 0; mIdx < Config.m; mIdx++)
-                {
-                    if (curGroup.Objs[mIdx] != node)
-                        templateGroup.Objs[mIdx] = curGroup.Objs[mIdx];
-                }
-                foreach (MGroup<T> skipGroup in skipGroups)
-                {
-                    skip = true;
-                    for (int mIdx = 0; mIdx < Config.m; mIdx++)
-                    {
-                        if (skipGroup.Objs[mIdx] == null)
-                            continue;
-                        if (skipGroup.Objs[mIdx] == templateGroup.Objs[mIdx])
-                            continue;
-                        skip = false;
-                    }
-                }
-                if (!skip)
-                    skipGroups.Add(templateGroup);
-                if (skip) continue;
-
-                List<MGroup<T>> combinatedGroups = MakeCombinationGroup(q, curGroup, node, invertedObj, newInvertedObj, newObjPool);
-
-                foreach (MGroup<T> newGroup in combinatedGroups)
-                {
-                    bool duplicated = false;
-                    foreach (MGroup<T> rGroup in resultGroups)
-                    {
-                        if (duplicated) break;
-                        if (rGroup == null) continue;
-                        bool iSkip = true;
-                        for (int mIdx = 0; mIdx < Config.m; mIdx++)
-                        {
-                            if (newGroup.Objs[mIdx] != rGroup.Objs[mIdx])
-                                iSkip = false;
-                        }
-                        if (iSkip)
-                        {
-                            duplicated = true;
-                            break;
-                        }
-                        
-                    }
-                    foreach (MGroup<T> rGroup in candidateGroups)
-                    {
-                        if (duplicated) break;
-                        if (rGroup == null) continue;
-                        bool iSkip = true;
-                        for (int mIdx = 0; mIdx < Config.m; mIdx++)
-                        {
-                            if (newGroup.Objs[mIdx] != rGroup.Objs[mIdx])
-                                iSkip = false;
-                        }
-                        if (iSkip)
-                        {
-                            duplicated = true;
-                            break;
-                        }
-                    }
-                    if (duplicated)
-                    {
-                        duplicatedGroups.Add(newGroup);
-                        continue;
-                    }
-
-                    tempGroups.Add(newGroup.Copy());
-                    tempGroups.Last().GetGroupMinDist(q);
-                    tempGroups.Last().GetGroupMaxDist(q);
-                    newGroup.GetGroupMinDist(q);
-                    if (newGroup.MinDist > theta) continue;
-                    newGroup.GetGroupMaxDist(q);
-                    UpdateTheta(newGroup);
-                    candidateGroups.Add(newGroup);
-                    UpdateInvertedCandidateGroups(newGroup);
-                }
+                MakeCombinationGroup(q, curGroup, node, invertedElemRTrees, newObjPool, newInvertedObj);
             }
             invertedCandidateGroups.Remove(node);
 
             candidateGroups.Sort();
-
-            var temp = invertedCandidateGroups.ToArray();
-
-            /*if (tempGroups.Count == 0)
-            {
-                foreach (MGroup<T> curGroup in invertedCandidateGroups[node])
-                {
-                    foreach (MGroup<T> newGroup in MakeCombinationGroup(curGroup, node))
-                    {
-                        MakeCombinationGroup(curGroup, node);
-                    }
-                }
-            }*/
 
             RemoveGroupByTheta(q);
 
@@ -1035,19 +980,13 @@ namespace RTree
                     if (KCounter == Config.k)
                         return;
 
-                    List<double> thetaPoolList = thetaPool.ToList();
-                    List<MGroup<T>> thetaGroupList = thetaGroups.ToList();
-                    int thetaIdx = thetaPool.ToList().IndexOf(thetaPool.Min());
-                    thetaPoolList.RemoveAt(thetaIdx);
-                    thetaGroupList.RemoveAt(thetaIdx);
-                    thetaPool = thetaPoolList.ToArray();
-                    thetaGroups = thetaGroupList.ToArray();
+                    DeQueueDeltaPool();
                     resultAddedGroups.Add(group);
                 }
                 else
                 {
                     if (bestNode != null) continue;
-                    foreach (object obj in group.Objs)
+                    foreach (object obj in group.Elems)
                     {
                         if (obj.GetType() == typeof (Node<T>))
                         {
@@ -1059,6 +998,7 @@ namespace RTree
                             }
                         }
                     }
+                    break;
                 }
             }
 
@@ -1067,186 +1007,273 @@ namespace RTree
                 candidateGroups.Remove(group);
             }
 
-            foreach (var obj in newObjPool)
-            {
-                objPool.Add(obj);
-            }
-            for (int mIdx = 0; mIdx < Config.m; mIdx++)
-            {
-                foreach (var obj in newInvertedObj[mIdx])
-                {
-                    invertedObj[mIdx].Add(obj);
-                }
-            }
-
             System.Diagnostics.Debug.Assert(bestNode != null);
             System.Diagnostics.Debug.Assert(invertedCandidateGroups.ContainsKey(bestNode) != false);
-
-            if(objPool.Contains(bestNode))
-                objPool.Remove(bestNode);
-            for (int mIdx = 0; mIdx < Config.m; mIdx++)
-            {
-                if (invertedObj[mIdx].Contains(bestNode))
-                    invertedObj[mIdx].Remove(bestNode);
-            }
-
-            NearestGroup(q, bestNode);
             
+            NearestGroup(q, bestNode);
         }
 
-        private List<MGroup<T>> MakeCombinationGroup(Point query, MGroup<T> openGroup, Node<T> openNode, List<object>[] invertedObj, List<object>[] newInvertedObj, List<object> newObjPool)
+        private void DeQueueDeltaPool()
         {
-            List<MGroup<T>> groups = new List<MGroup<T>>();
+            List<double> thetaPoolList = thetaPool.ToList();
+            List<MGroup<T>> thetaGroupList = thetaGroups.ToList();
+            int thetaIdx = thetaPool.ToList().IndexOf(thetaPool.Min());
+            thetaPoolList.RemoveAt(thetaIdx);
+            thetaGroupList.RemoveAt(thetaIdx);
+            thetaPool = thetaPoolList.ToArray();
+            thetaGroups = thetaGroupList.ToArray();
+        }
 
-            Dictionary<int, List<object>> skipList = new Dictionary<int, List<object>>();
-            for (int cIdx = 0; cIdx < Math.Pow(2, Config.m); cIdx++)
+        private void InsertOpenElements(Point q, Node<T> node, List<object>[] newInvertedObj, List<object> newObjPool)
+        {
+            // Insert child nodes into inverted List
+            if (node.isLeaf() == false)
             {
-                skipList[cIdx] = new List<object>();
+                Node<T>[] nodes = new Node<T>[node.entryCount];
+                for (int i = 0; i < node.entryCount; i++)
+                {
+                    nodes[i] = NodeMap[node.ids[i]];
+                }
+                foreach (Node<T> childNode in nodes)
+                {
+                    Rectangle elemRec = new Rectangle(childNode as Node<Point>);
+                    elemRecDic.Add(childNode, elemRec);
+
+                    if (childNode.mbr.distance(q) > delta) continue;
+                    bool allSet = true;
+                    for (int mIdx = 0; mIdx < Config.m; mIdx++)
+                    {
+                        if (childNode.bitArray[mIdx] == true)
+                        {
+                            invertedElemRTrees[mIdx].Add(elemRec, childNode);
+                            newInvertedObj[mIdx].Add(childNode);
+                        }
+                        else
+                            allSet = false;
+                    }
+                    newObjPool.Add(childNode);
+                }
+            }
+            // Add points into inverted List
+            else if (node.isLeaf() == true)
+            {
+                T[] objs = new T[node.entryCount];
+                for (int i = 0; i < node.entryCount; i++)
+                {
+                    objs[i] = IdsToItems[node.ids[i]];
+                }
+                foreach (T obj in objs)
+                {
+                    System.Diagnostics.Debug.Assert(obj.GetType() == typeof (Point));
+                    if (obj.GetType() != typeof (Point)) continue;
+
+                    Point point = obj as Point;
+
+                    if (point.GetDist(q) > delta) continue;
+
+                    Rectangle elemRec = new Rectangle(point);
+                    elemRecDic.Add(point, elemRec);
+                    invertedElemRTrees[point.category].Add(elemRec, point);
+
+                    newInvertedObj[point.category].Add(point);
+                    newObjPool.Add(point);
+                }
+            }
+        }
+
+        private void MakeCombinationGroup(Point queryPoint, MGroup<T> openGroup, Node<T> openNode, RTree<object>[] invertedElemRTree, List<object> newElemPool, List<object>[] newInvertedElem)
+        {
+            if(openGroup.IsDictator() && !openNode.isLeaf())
+            { 
+                MakeCombinationGroup(queryPoint, newElemPool, newInvertedElem);
+                return;
             }
 
             MGroup<T> templateGroup = new MGroup<T>(new object[Config.m]);
-            for (int mIdx = 0; mIdx < Config.m; mIdx++)
-            {
-                if (openGroup.Objs[mIdx] != openNode)
-                    templateGroup.Objs[mIdx] = openGroup.Objs[mIdx];
+            if(openGroup.IsDictator() == false)
+            { 
+                for (int mIdx = 0; mIdx < Config.m; mIdx++)
+                {
+                    if (openGroup.Elems[mIdx] != openNode)
+                        templateGroup.Elems[mIdx] = openGroup.Elems[mIdx];
+                }
             }
 
+            MakeCombinationGroup(queryPoint, templateGroup, invertedElemRTree);
+        }
+
+        // When the OpenGroup is not a Dictator Group, Make Combination Groups using delta constraint rule
+        private void MakeCombinationGroup(Point queryPoint, MGroup<T> templateGroup, RTree<object>[] invertedElemRTree)
+        {
             List<MGroup<T>> partialGroups = new List<MGroup<T>>();
-            foreach(object obj in newObjPool)
+
+            partialGroups.Add(templateGroup);
+
+            while (partialGroups.Count != 0)
             {
-                MGroup<T> newGroup = templateGroup.Copy();
-                for (int mIdx = 0; mIdx < Config.m; mIdx++)
+                List<MGroup<T>> removePartialGroups = new List<MGroup<T>>();
+                List<MGroup<T>> addPartialGroups = new List<MGroup<T>>();
+
+                foreach (MGroup<T> partialGroup in partialGroups)
                 {
-                    if (newGroup.Objs[mIdx] == null)
+                    if (partialGroup.IsAllSet())
                     {
-                        if (obj.GetType() == typeof (Node<T>))
-                        {
-                            Node<T> node = obj as Node<T>;
-                            if (node.bitArray[mIdx] != null)
-                            {
-                                newGroup.Objs[mIdx] = node;
-                            }
-                        }
-                        else if (obj.GetType() == typeof (Point))
-                        {
-                            Point point = obj as Point;
-                            if (point.category == mIdx)
-                            {
-                                newGroup.Objs[mIdx] = point;
-                            }
-                        }
+                        AddGroupToCandidate(queryPoint, partialGroup);
+                        removePartialGroups.Add(partialGroup);
+                        continue;
                     }
+
+                    Rectangle searchArea = partialGroup.GetCombinationMBR(delta, queryPoint);
+
+                    int idx = partialGroup.GetFirstNullIndex();
+
+                    System.Diagnostics.Debug.Assert(idx != -1);
+
+                    foreach (object element in invertedElemRTree[idx].Contains(searchArea))
+                    {
+                        System.Diagnostics.Debug.Assert(element != null);
+
+                        MGroup<T> newGroup = partialGroup.Copy();
+                        AddElementToGroup(element, newGroup);
+                        addPartialGroups.Add(newGroup);
+                    }
+                    removePartialGroups.Add(partialGroup);
                 }
-                partialGroups.Add(newGroup);
+
+                foreach (MGroup<T> group in removePartialGroups)
+                {
+                    partialGroups.Remove(group);
+                }
+                foreach (MGroup<T> group in addPartialGroups)
+                {
+                    partialGroups.Add(group);
+                }
+            }
+        }
+
+        // When the OpenGroup is a Dictator Group and openNode is internal Node, Make Combination Groups using newly added objets only.
+        private void MakeCombinationGroup(Point queryPoint, List<object> newElemPool, List<object>[] newInvertedElem )
+        {
+            List<MGroup<T>> partialGroups = new List<MGroup<T>>();
+
+            foreach (object elem in newElemPool)
+            {
+                partialGroups.Add(GetNewGroupByElement(elem));
             }
 
-            /*for (int cIdx = 1; cIdx < Math.Pow(2, Config.m); cIdx++)
-            {
-                List<MGroup<T>> partialGroups = new List<MGroup<T>>();
-                partialGroups.Add(templateGroup.Copy());
+            List < MGroup < T >> removeGroups = new List<MGroup<T>>();
 
-                BitArray combinationRule = new BitArray(new int[] { cIdx });
+            foreach (MGroup<T> group in partialGroups)
+            {
+                if (group.IsAllSet())
+                {
+                    AddGroupToCandidate(queryPoint, group);
+                    removeGroups.Add(group);
+                }
+            }
+
+            foreach (MGroup<T> group in removeGroups)
+            {
+                partialGroups.Remove(group);
+            }
+
+            while(partialGroups.Count != 0)
+            {
+                List<MGroup<T>> removePartialGroups = new List<MGroup<T>>();
+                List<MGroup<T>> addPartialGroups = new List<MGroup<T>>();
+
+                foreach (MGroup<T> partialGroup in partialGroups)
+                {
+                    if (partialGroup.IsAllSet())
+                    {
+                        AddGroupToCandidate(queryPoint, partialGroup);
+                        removePartialGroups.Add(partialGroup);
+                        continue;
+                    }
+
+                    int idx = partialGroup.GetFirstNullIndex();
+
+                    System.Diagnostics.Debug.Assert(idx != -1);
+
+                    foreach (object element in newInvertedElem[idx])
+                    {
+                        MGroup<T> newGroup = partialGroup.Copy();
+                        AddElementToGroup(element, newGroup);
+                        addPartialGroups.Add(newGroup);
+                    }
+                    removePartialGroups.Add(partialGroup);
+                }
+
+                foreach (MGroup<T> group in removePartialGroups)
+                {
+                    partialGroups.Remove(group);
+                }
+                foreach (MGroup<T> group in addPartialGroups)
+                {
+                    partialGroups.Add(group);
+                }
+            }
+        }
+
+        private bool AddGroupToCandidate(Point queryPoint, MGroup<T> partialGroup)
+        {
+            if (DuplicateCheck(partialGroup) == false) return false;
+
+            partialGroup.GetGroupMinDist(queryPoint);
+            if (partialGroup.MinDist > delta)
+                return false;
+            partialGroup.GetGroupMaxDist(queryPoint);
+            UpdateDelta(partialGroup);
+            candidateGroups.Add(partialGroup);
+            return true;
+        }
+
+        private bool DuplicateCheck(MGroup<T> partialGroup)
+        {
+            foreach (MGroup<T> group in candidateGroups)
+            {
+                bool checkBit = false;
+                for (int mIdx = 0; mIdx < Config.m; mIdx++)
+                {
+                    if (partialGroup.Elems[mIdx] != group.Elems[mIdx])
+                    {
+                        checkBit = true;
+                    }
+                }
+                if (checkBit == false)
+                    return checkBit;
+            }
+            return true;
+        }
+
+        private MGroup<T> GetNewGroupByElement(object element)
+        {
+            MGroup<T> group = new MGroup<T>(new object[Config.m]);
+            AddElementToGroup(element, @group);
+            return group;
+        }
+
+        private void AddElementToGroup(object element, MGroup<T> @group)
+        {
+            if (element.GetType() == typeof (Node<T>))
+            {
+                Node<T> node = element as Node<T>;
+
+                if(invertedCandidateGroups.ContainsKey(node) == false)
+                    invertedCandidateGroups[node] = new List<MGroup<T>>();
+                invertedCandidateGroups[node].Add(@group);
 
                 for (int mIdx = 0; mIdx < Config.m; mIdx++)
                 {
-                    if (templateGroup.Objs[mIdx] != null) continue;
-
-                    List<MGroup<T>> removePartialGroups = new List<MGroup<T>>();
-                    List<MGroup<T>> addPartialGroups = new List<MGroup<T>>();
-
-                    List<object>[] combInvObj = null;
-
-                    if (combinationRule[mIdx] == false)
-                    {
-                        combInvObj = invertedObj;
-                    }
-                    else
-                    {
-                        combInvObj = newInvertedObj;
-                    }
-
-                    foreach (object obj in combInvObj[mIdx])
-                    {
-                        foreach (MGroup<T> group in partialGroups)
-                        {
-                            bool allSet = false;
-
-                            if (group.Objs[mIdx] != null) continue;
-                            if(removePartialGroups.Contains(group) == false)
-                                removePartialGroups.Add(group);
-
-                            MGroup<T> newGroup = group.Copy();
-                            if (obj.GetType() == typeof(Node<T>))
-                            {
-                                Node<T> node = obj as Node<T>;
-                                for (int bIdx = mIdx; bIdx < Config.m; bIdx++)
-                                {
-                                    if (node.bitArray[bIdx] == true)
-                                        newGroup.Objs[bIdx] = node;
-                                }
-                                if (mIdx == 0)
-                                {
-                                    allSet = true;
-                                    foreach (bool bit in node.bitArray)
-                                    {
-                                        if (bit == false)
-                                            allSet = false;
-                                    }
-                                }
-                                BitArray skipBit = new BitArray(Config.m);
-                                for (int sIdx = 0; sIdx < skipBit.Length; sIdx++)
-                                {
-                                    if(sIdx <= mIdx)
-                                    {
-                                        if (node.bitArray[sIdx] == combinationRule[sIdx])
-                                        {
-                                            skipBit[sIdx] = node.bitArray[sIdx];
-                                        }
-                                        else
-                                        {
-                                            skipBit[sIdx] = !(node.bitArray[sIdx]);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        skipBit[sIdx] = node.bitArray[sIdx];
-                                    }
-                                }
-                                int skipKey = getIntFromBitArray(skipBit);
-                                if (skipList[skipKey].Contains(node)) continue;
-                                skipList[skipKey].Add(node);
-                            }
-                            else if (obj.GetType() == typeof(Point))
-                            {
-                                Point point = obj as Point;
-                                newGroup.Objs[mIdx] = point;
-                            }
-                            if (combinationRule[mIdx] == false && allSet) continue;
-                            addPartialGroups.Add(newGroup);
-                        }
-                    }
-                    foreach (MGroup<T> group in removePartialGroups)
-                    {
-                        partialGroups.Remove(group);
-                    }
-                    foreach (MGroup<T> group in addPartialGroups)
-                    {
-                        if (group.IsAllSet())
-                        {
-                            if (group.GetGroupMinDist(query) < theta)
-                            {
-                                groups.Add(group);
-                            }
-                        }
-                        else
-                        {
-                            partialGroups.Add(group);
-                        }
-                    }
+                    if (node.bitArray[mIdx] == true)
+                        @group.Elems[mIdx] = node;
                 }
-            }*/
-
-            return groups;
+            }
+            else if (element.GetType() == typeof (Point))
+            {
+                Point obj = element as Point;
+                @group.Elems[obj.category] = obj;
+            }
         }
 
         private int getIntFromBitArray(BitArray bitArray)
@@ -1267,7 +1294,7 @@ namespace RTree
             List<object> removeKeys = new List<object>();
             foreach (var group in candidateGroups)
             {
-                if (group.MinDist > theta)
+                if (group.MinDist > delta)
                 {
                     removeGroups.Add(group);
                 }
@@ -1281,7 +1308,7 @@ namespace RTree
                     if (kv.Key.GetType() == typeof(Node<T>))
                     {
                         Node<T> innerNode = kv.Key as Node<T>;
-                        if (innerNode.mbr.distance(q) > theta)
+                        if (innerNode.mbr.distance(q) > delta)
                         {
                             kv.Value.Clear();
                             removeKeys.Add(kv.Key);
@@ -1291,7 +1318,7 @@ namespace RTree
                     else if (kv.Key.GetType() == typeof(Point))
                     {
                         Point innerPoint = kv.Key as Point;
-                        if (innerPoint.GetDist(q) > theta)
+                        if (innerPoint.GetDist(q) > delta)
                         {
                             kv.Value.Clear();
                             removeKeys.Add(kv.Key);
@@ -1315,7 +1342,7 @@ namespace RTree
         private void UpdateInvertedCandidateGroups(MGroup<T> newGroup)
         {
             List<object> skipList = new List<object>();
-            foreach (object obj in newGroup.Objs)
+            foreach (object obj in newGroup.Elems)
             {
                 if (skipList.Contains(obj)) continue;
                 skipList.Add(obj);
@@ -1326,13 +1353,13 @@ namespace RTree
             }
         }
 
-        private void UpdateTheta(MGroup<T> newGroup)
+        private void UpdateDelta(MGroup<T> newGroup)
         {
             if (thetaPool.Max() > newGroup.MaxDist)
             {
                 int idx = thetaPool.ToList().IndexOf(thetaPool.Max());
                 thetaPool[idx] = newGroup.MaxDist;
-                theta = thetaPool.Max();
+                delta = thetaPool.Max();
                 thetaGroups[idx] = newGroup;
             }
         }
@@ -1345,15 +1372,15 @@ namespace RTree
             MGroup<T> templateGroup = new MGroup<T>(new object[Config.m]);
             for (int mIdx = 0; mIdx < Config.m; mIdx++)
             {
-                if(openGroup.Objs[mIdx] != openNode)
-                    templateGroup.Objs[mIdx] = openGroup.Objs[mIdx];
+                if(openGroup.Elems[mIdx] != openNode)
+                    templateGroup.Elems[mIdx] = openGroup.Elems[mIdx];
             }
 
             partialGroups.Add(templateGroup);
 
             for (int mIdx = 0; mIdx < Config.m; mIdx++)
             {
-                if (templateGroup.Objs[mIdx] != null) continue;
+                if (templateGroup.Elems[mIdx] != null) continue;
 
                 List<MGroup<T>> removePartialGroups = new List<MGroup<T>>();
                 List<MGroup<T>> addPartialGroups = new List<MGroup<T>>();
@@ -1361,7 +1388,7 @@ namespace RTree
                 {
                     foreach (MGroup<T> group in partialGroups)
                     {
-                        if (group.Objs[mIdx] != null) continue;
+                        if (group.Elems[mIdx] != null) continue;
                         removePartialGroups.Add(group);
 
                         MGroup<T> newGroup = group.Copy();
@@ -1371,13 +1398,13 @@ namespace RTree
                             for (int bIdx = mIdx; bIdx < Config.m; bIdx++)
                             {
                                 if (node.bitArray[bIdx] == true)
-                                    newGroup.Objs[bIdx] = node;
+                                    newGroup.Elems[bIdx] = node;
                             }
                         }
                         else if (obj.GetType() == typeof(Point))
                         {
                             Point point = obj as Point;
-                            newGroup.Objs[mIdx] = point;
+                            newGroup.Elems[mIdx] = point;
                         }
                         addPartialGroups.Add(newGroup);
                     }
@@ -1436,7 +1463,7 @@ namespace RTree
 
             for (int mIdx = 0; mIdx < Config.m; mIdx++)
             {
-                if (templateGroup.Objs[mIdx] != null) continue;
+                if (templateGroup.Elems[mIdx] != null) continue;
 
                 List<MGroup<T>> removePartialGroups = new List<MGroup<T>>();
                 List<MGroup<T>> addPartialGroups = new List<MGroup<T>>();
@@ -1444,7 +1471,7 @@ namespace RTree
                 {
                     foreach (MGroup<T> group in partialGroups)
                     {
-                        if (group.Objs[mIdx] != null) continue;
+                        if (group.Elems[mIdx] != null) continue;
                         removePartialGroups.Add(group);
 
                         MGroup<T> newGroup = group.Copy();
@@ -1454,13 +1481,13 @@ namespace RTree
                             for (int bIdx = mIdx; bIdx < Config.m; bIdx++)
                             {
                                 if (node.bitArray[bIdx] == true)
-                                    newGroup.Objs[bIdx] = node;
+                                    newGroup.Elems[bIdx] = node;
                             }
                         }
                         else if (obj.GetType() == typeof(Point))
                         {
                             Point point = obj as Point;
-                            newGroup.Objs[mIdx] = point;
+                            newGroup.Elems[mIdx] = point;
                         }
                         addPartialGroups.Add(newGroup);
                     }
