@@ -594,7 +594,7 @@ namespace RTree
                 {
                     Rectangle r = GetGroupMBR();
                     double innerDist = GetDiagonalDist(r);
-                    double interDist = GetMinMaxInterDist(r, q);
+                    double interDist = GetMaxMinInterDist(r, q);
                     this.maxDist = innerDist + interDist;
                     return this.maxDist;
                 }
@@ -610,7 +610,7 @@ namespace RTree
             }
 
             // Find endpoints of Maximum digonal line, and then find minimum interDist of endpoints
-            public double GetMinMaxInterDist(Rectangle rectangle, Point point)
+            public double GetMaxMinInterDist(Rectangle rectangle, Point point)
             {
                 double interDist = Double.MaxValue;
                 double[] center = new double[rectangle.min.Length];
