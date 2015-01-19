@@ -39,6 +39,8 @@ namespace mbR_NGQ
             }
             rTree.CalculateBitArray();
 
+            System.Diagnostics.Debug.WriteLine("RTree Insert End");
+
             List<RTree<Point>.MGroup<Point>> nearGroups = null;
 
             Stopwatch sw = new Stopwatch();
@@ -63,8 +65,6 @@ namespace mbR_NGQ
 
             sw.Stop();
             System.Diagnostics.Debug.WriteLine(sw.ElapsedMilliseconds);
-
-            System.Diagnostics.Debug.WriteLine("RTree Insert End");
 
             /*rTreePanel1.RTree = rTree;*/
             rTreePanel1.NearGroups = nearGroups;

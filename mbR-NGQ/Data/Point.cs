@@ -33,7 +33,7 @@ namespace RTree
     {
         public override string ToString()
         {
-            return string.Format("x : {0} y : {1}", this.coordinates[0], this.coordinates[1]);
+            return string.Format("ID : {0} x : {1} y : {2}", this.id, this.coordinates[0], this.coordinates[1]);
         }
 
         /// <summary>

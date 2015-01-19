@@ -70,6 +70,7 @@
     <Compile Include="Data\PriorityQueueNode.cs" />
     <Compile Include="Data\Rectangle.cs" />
     <Compile Include="Data\RTree.cs" />
+    <Compile Include="Data\Util.cs" />
     <Compile Include="Tests\RTreeTest.cs" />
     <Compile Include="UI\OptionForm.cs">
       <SubType>Form</SubType>
