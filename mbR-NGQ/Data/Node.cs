@@ -42,6 +42,8 @@ namespace RTree
         internal int level;
         internal int entryCount;
         internal bool visited = false;
+        internal double minDist;
+        internal double maxDist;
 
         public override string ToString()
         {
@@ -191,6 +193,15 @@ namespace RTree
         internal bool isLeaf()
         {
             return (level == 1);
+        }
+
+        internal bool isDictator()
+        {
+            foreach (bool bit in this.bitArray)
+            {
+                if (bit == false) return false;
+            }
+            return true;
         }
 
         public int getLevel()
