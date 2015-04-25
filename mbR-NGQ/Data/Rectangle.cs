@@ -49,6 +49,8 @@ namespace RTree
          */
         internal float[] min;
 
+        internal double minDist;
+
         private object element;
 
         public object Element

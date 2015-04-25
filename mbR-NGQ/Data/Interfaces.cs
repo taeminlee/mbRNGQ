@@ -9,6 +9,6 @@ namespace mbR_NGQ
 {
     public abstract class DataGenerator
     {
-        public abstract Point[] GeneratePoints(int n);
+        public abstract Point[] GeneratePoints(int n, int m, Random rand);
     }
 }

@@ -42,6 +42,7 @@ namespace RTree
         internal int level;
         internal int entryCount;
         internal bool visited = false;
+        internal bool opened = false;
         internal double minDist;
         internal double maxDist;
 

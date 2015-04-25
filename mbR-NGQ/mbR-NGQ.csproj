@@ -70,8 +70,15 @@
     <Compile Include="Data\PriorityQueueNode.cs" />
     <Compile Include="Data\Rectangle.cs" />
     <Compile Include="Data\RTree.cs" />
+    <Compile Include="Data\UniformGenerator.cs" />
     <Compile Include="Data\Util.cs" />
     <Compile Include="Tests\RTreeTest.cs" />
+    <Compile Include="UI\DebugForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\DebugForm.Designer.cs">
+      <DependentUpon>DebugForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="UI\OptionForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -92,6 +99,9 @@
     <Compile Include="UI\RTreePanel.Designer.cs">
       <DependentUpon>RTreePanel.cs</DependentUpon>
     </Compile>
+    <EmbeddedResource Include="UI\DebugForm.resx">
+      <DependentUpon>DebugForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="UI\OptionForm.resx">
       <DependentUpon>OptionForm.cs</DependentUpon>
     </EmbeddedResource>

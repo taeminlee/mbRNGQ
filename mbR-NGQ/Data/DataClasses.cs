@@ -11,6 +11,12 @@ namespace mbR_NGQ
     {
         private Point[] points;
         private DataGenerator dataGenerator;
+        private Random rand;
+
+        public DataSet(Random rand)
+        {
+            this.rand = rand;
+        }
 
         public Point[] Points
         {
@@ -25,11 +31,11 @@ namespace mbR_NGQ
         }
 
 
-        public void DataGeneration(int pointNum)
+        public void DataGeneration(int pointNum, int m)
         {
             System.Diagnostics.Debug.Assert(pointNum > 0);
 
-            this.points = dataGenerator.GeneratePoints(pointNum);
+            this.points = dataGenerator.GeneratePoints(pointNum, m, this.rand);
         }
     }
 }

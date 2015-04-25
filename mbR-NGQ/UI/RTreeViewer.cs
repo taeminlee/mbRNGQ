@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using mbR_NGQ.UI;
 using RTree;
 using Point = RTree.Point;
 using Rectangle = RTree.Rectangle;
@@ -22,12 +23,20 @@ namespace mbR_NGQ
         public RTreeViewer()
         {
             InitializeComponent();
+
+            DebugForm df = new DebugForm();
+            df.TopMost = true;
+            //df.Show();
             
             System.Diagnostics.Debug.WriteLine("Data Generation Start");
 
-            DataSet dataSet = new DataSet();
+            Random rand = new Random();
+
+            DataSet dataSet = new DataSet(rand);
             dataSet.DataGenerator = new UniformGenerator();
-            dataSet.DataGeneration(Config.n * Config.m);
+            //dataSet.DataGenerator = new GaussianGenerator();
+            //dataSet.DataGenerator = new GaussianIslandGenerator();
+            dataSet.DataGeneration(Config.n, Config.m);
 
             System.Diagnostics.Debug.WriteLine("Data Generation End");
             System.Diagnostics.Debug.WriteLine("RTree Insert Start");
@@ -46,27 +55,30 @@ namespace mbR_NGQ
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            Random rand = new Random();
             Point queryPoint = null;
 
-            for(int i = 0; i < 100; i++)
+            float x = 0;
+            float y = 0;
+
+            /*for(int i = 0; i < 100; i++)
             {
-                float x = (float)(rand.NextDouble() * (Config.maxX - Config.minX) + Config.minX);
-                float y = (float)(rand.NextDouble() * (Config.maxY - Config.minY) + Config.minY);
+                System.Diagnostics.Debug.WriteLine("TRIAL : " + i);
+                x = (float)(rand.NextDouble() * (Config.maxX - Config.minX) + Config.minX);
+                y = (float)(rand.NextDouble() * (Config.maxY - Config.minY) + Config.minY);
                 queryPoint = new Point((float)x, (float)y, 0);
                 nearGroups = rTree.NearestGroup(queryPoint);
-                //System.Diagnostics.Debug.Assert(rTree.CheckNearGroup(queryPoint, nearGroups) == true);
-            }
+                System.Diagnostics.Debug.Assert(rTree.CheckNearGroup(queryPoint, nearGroups) == true);
+            }*/
             
-            /*float x = (float)(rand.NextDouble() * (Config.maxX - Config.minX) + Config.minX);
-            float y = (float)(rand.NextDouble() * (Config.maxY - Config.minY) + Config.minY);
+            x = (float)(rand.NextDouble() * (Config.maxX - Config.minX) + Config.minX);
+            y = (float)(rand.NextDouble() * (Config.maxY - Config.minY) + Config.minY);
             queryPoint = new Point((float)x, (float)y, 0);
-            nearGroups = rTree.NearestGroup(queryPoint);*/
+            nearGroups = rTree.NearestGroup(queryPoint);
 
             sw.Stop();
             System.Diagnostics.Debug.WriteLine(sw.ElapsedMilliseconds);
 
-            /*rTreePanel1.RTree = rTree;*/
+            rTreePanel1.RTree = rTree;
             rTreePanel1.NearGroups = nearGroups;
             rTreePanel1.QueryPoint = queryPoint;
             rTreePanel1.InitRTree();
@@ -131,6 +143,12 @@ namespace mbR_NGQ
                     rTreePanel1.RefreshChart();
                 }
             }
+        }
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            rTreePanel1.ShowAllNodes = checkBox1.Checked;
+            rTreePanel1.RefreshChart();
         }
     }
 }
