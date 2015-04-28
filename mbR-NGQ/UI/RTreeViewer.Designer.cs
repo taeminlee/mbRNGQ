@@ -33,6 +33,7 @@
             this.checkedListBox2 = new System.Windows.Forms.CheckedListBox();
             this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.rTreePanel1 = new mbR_NGQ.RTreePanel();
+            this.checkedListBox3 = new System.Windows.Forms.CheckedListBox();
             this.SuspendLayout();
             // 
             // checkedListBox1
@@ -42,7 +43,7 @@
             this.checkedListBox1.FormattingEnabled = true;
             this.checkedListBox1.Location = new System.Drawing.Point(893, 32);
             this.checkedListBox1.Name = "checkedListBox1";
-            this.checkedListBox1.Size = new System.Drawing.Size(152, 260);
+            this.checkedListBox1.Size = new System.Drawing.Size(152, 180);
             this.checkedListBox1.TabIndex = 1;
             this.checkedListBox1.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(this.checkedListBox1_ItemCheck);
             // 
@@ -51,9 +52,9 @@
             this.checkedListBox2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.checkedListBox2.CheckOnClick = true;
             this.checkedListBox2.FormattingEnabled = true;
-            this.checkedListBox2.Location = new System.Drawing.Point(893, 298);
+            this.checkedListBox2.Location = new System.Drawing.Point(893, 410);
             this.checkedListBox2.Name = "checkedListBox2";
-            this.checkedListBox2.Size = new System.Drawing.Size(152, 292);
+            this.checkedListBox2.Size = new System.Drawing.Size(152, 180);
             this.checkedListBox2.TabIndex = 1;
             this.checkedListBox2.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(this.checkedListBox2_ItemCheck);
             // 
@@ -79,8 +80,21 @@
             this.rTreePanel1.NearGroups = null;
             this.rTreePanel1.QueryPoint = null;
             this.rTreePanel1.RTree = null;
+            this.rTreePanel1.ShowAllNodes = false;
             this.rTreePanel1.Size = new System.Drawing.Size(887, 597);
             this.rTreePanel1.TabIndex = 0;
+            // 
+            // checkedListBox3
+            // 
+            this.checkedListBox3.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.checkedListBox3.CheckOnClick = true;
+            this.checkedListBox3.FormattingEnabled = true;
+            this.checkedListBox3.Location = new System.Drawing.Point(893, 218);
+            this.checkedListBox3.Name = "checkedListBox3";
+            this.checkedListBox3.Size = new System.Drawing.Size(152, 180);
+            this.checkedListBox3.TabIndex = 1;
+            this.checkedListBox3.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(this.checkedListBox3_ItemCheck);
+            this.checkedListBox3.SelectedIndexChanged += new System.EventHandler(this.checkedListBox3_SelectedIndexChanged);
             // 
             // RTreeViewer
             // 
@@ -88,6 +102,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1048, 598);
             this.Controls.Add(this.checkBox1);
+            this.Controls.Add(this.checkedListBox3);
             this.Controls.Add(this.checkedListBox2);
             this.Controls.Add(this.checkedListBox1);
             this.Controls.Add(this.rTreePanel1);
@@ -106,6 +121,7 @@
         private System.Windows.Forms.CheckedListBox checkedListBox1;
         private System.Windows.Forms.CheckedListBox checkedListBox2;
         private System.Windows.Forms.CheckBox checkBox1;
+        private System.Windows.Forms.CheckedListBox checkedListBox3;
     }
 }
 
