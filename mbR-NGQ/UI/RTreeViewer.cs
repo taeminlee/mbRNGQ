@@ -33,9 +33,9 @@ namespace mbR_NGQ
             Random rand = new Random();
 
             DataSet dataSet = new DataSet(rand);
-            //dataSet.DataGenerator = new UniformGenerator();
+            dataSet.DataGenerator = new UniformGenerator();
             //dataSet.DataGenerator = new GaussianGenerator();
-            dataSet.DataGenerator = new GaussianIslandGenerator();
+            //dataSet.DataGenerator = new GaussianIslandGenerator();
             dataSet.DataGeneration(Config.n, Config.m);
 
             System.Diagnostics.Debug.WriteLine("Data Generation End");
@@ -60,7 +60,7 @@ namespace mbR_NGQ
             float x = 0;
             float y = 0;
 
-            for(int i = 0; i < 100; i++)
+            for(int i = 0; i < 10000; i++)
             {
                 System.Diagnostics.Debug.WriteLine("TRIAL : " + i);
                 x = (float)(rand.NextDouble() * (Config.maxX - Config.minX) + Config.minX);
