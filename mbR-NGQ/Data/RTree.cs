@@ -33,6 +33,7 @@ using System.Security.Cryptography;
 using System.Security.Permissions;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using System.Windows.Forms.VisualStyles;
 using mbR_NGQ;
 using mbR_NGQ.Data;
 using mbR_NGQ.UI;
@@ -1030,6 +1031,12 @@ namespace RTree
         private BitArray groupBitArray;
         private int accessCount;
 
+        private List<MGroup<T>> removeGroups;
+        private List<Node<T>> removeNodes;
+        private List<int> removeElements;
+
+        public bool debug = false;
+
         public List<MGroup<T>> NearestGroup(Point q)
         {
             //foreach()
@@ -1054,6 +1061,10 @@ namespace RTree
             candidateGroups = new HeapPriorityQueue<MGroup<T>>(10000000);
             //invertedCandidateGroups = new Dictionary<object, List<MGroup<T>>>();
             invertedCandidateGroups = new Dictionary<Node<T>, List<MGroup<T>>>();
+
+            removeNodes = new List<Node<T>>();
+            removeGroups = new List<MGroup<T>>();
+            removeElements = new List<int>();
 
             resultGroups = new MGroup<T>[Config.k];
             // 차원별로 역인덱스 구축
@@ -1153,26 +1164,14 @@ namespace RTree
 
             //PrintCandidateSet();
 
-            List<MGroup<T>> _beforecandidateGroups = candidateGroups.ToList();;
+            if(debug)
+            { 
+                List<MGroup<T>> _beforecandidateGroups = candidateGroups.ToList();;
 
-            Dictionary<Node<T>, List<MGroup<T>>> _beforeInvertedCandidateGroups = new Dictionary<Node<T>, List<MGroup<T>>>();
-            foreach (var ttt in invertedCandidateGroups)
-            {
-                _beforeInvertedCandidateGroups.Add(ttt.Key, ttt.Value.ToList());
-            }
-
-            foreach (Node<T> openNode in openNodes)
-            {
-                Rectangle rec = new Rectangle(openNode as Node<Point>);
-
-                // 1. openNode 들을 역 인덱스에서 제거
-                for (int mIdx = 0; mIdx < Config.m; mIdx++)
+                Dictionary<Node<T>, List<MGroup<T>>> _beforeInvertedCandidateGroups = new Dictionary<Node<T>, List<MGroup<T>>>();
+                foreach (var ttt in invertedCandidateGroups)
                 {
-                    if (openNode.bitArray[mIdx] == true)
-                    {
-                        Debug.Assert(invertedElemRTrees[mIdx].ItemsToIds.ContainsKey(openNode));
-                        invertedElemRTrees[mIdx].Delete(rec, openNode);
-                    }
+                    _beforeInvertedCandidateGroups.Add(ttt.Key, ttt.Value.ToList());
                 }
             }
             
@@ -1184,6 +1183,9 @@ namespace RTree
 
             foreach (Node<T> openNode in openNodes)
             {
+                if(debug)
+                    System.Diagnostics.Debug.WriteLine("NearestGroup {0} inside openNode : {1}", accessCount, openNode.ToString());
+
                 List<Point>[] invertedNewObjs = new List<Point>[Config.m];
                 newElems = new List<object>();
 
@@ -1195,9 +1197,18 @@ namespace RTree
                     invertedNewNodes[mIdx] = new List<Node<T>>();
                 }
 
-                /*System.Diagnostics.Debug.WriteLine("NearestGroup {0} inside openNode : {1}", accessCount,
-                    openNode.ToString());
-*/
+                Rectangle rec = new Rectangle(openNode as Node<Point>);
+
+                // 1. openNode를 역 인덱스에서 제거
+                for (int mIdx = 0; mIdx < Config.m; mIdx++)
+                {
+                    if (openNode.bitArray[mIdx] == true)
+                    {
+                        Debug.Assert(invertedElemRTrees[mIdx].ItemsToIds.ContainsKey(openNode));
+                        invertedElemRTrees[mIdx].Delete(rec, openNode);
+                    }
+                }
+
                 foreach (var node in GetDirtyNodes(openNodes, openNode))
                 {
                     dirtyNodes.Add(node);
@@ -1227,7 +1238,13 @@ namespace RTree
             }
 
                 
-            MakeBestGroups(q, newNodes, invertedNewNodes, invertedElemRTrees);
+            MakeBestGroupsTC(q, newNodes, invertedNewNodes, invertedElemRTrees);
+
+            foreach (var node in RemoveGroupByTheta(q))
+            {
+                if (openNodes.Contains(node) == false)
+                    dirtyNodes.Add(node);
+            }
 
             // DirtyNode에 대해 BestGroup 생성 및 Theta Filtering 과정 진행. DirtyNode가 생성될 경우 해당 과정 반복
             while (dirtyNodes.Count > 0)
@@ -1244,7 +1261,7 @@ namespace RTree
                     }
                 }*/
 
-                MakeBestGroups(q, dirtyNodes, null, invertedElemRTrees);
+                MakeBestGroupsTC(q, dirtyNodes, null, invertedElemRTrees);
 
                 dirtyNodes.Clear();
 
@@ -1260,14 +1277,17 @@ namespace RTree
                 invertedCandidateGroups.Remove(openNode);
             }
 
-            int currentKCounter = KCounter;
+            if(debug)
+            { 
+                int currentKCounter = KCounter;
 
-            List<MGroup<T>> _candidateGroups = candidateGroups.ToList();
+                List<MGroup<T>> _candidateGroups = candidateGroups.ToList();
 
-            Dictionary<Node<T>, List<MGroup<T>>> _invertedCandidateGroups = new Dictionary<Node<T>, List<MGroup<T>>>();
-            foreach (var ttt in invertedCandidateGroups)
-            {
-                _invertedCandidateGroups.Add(ttt.Key, ttt.Value.ToList());
+                Dictionary<Node<T>, List<MGroup<T>>> _invertedCandidateGroups = new Dictionary<Node<T>, List<MGroup<T>>>();
+                foreach (var ttt in invertedCandidateGroups)
+                {
+                    _invertedCandidateGroups.Add(ttt.Key, ttt.Value.ToList());
+                }
             }
 
 
@@ -1290,8 +1310,8 @@ namespace RTree
                 else
                 {
                     delGroups.Add(group);
-                    /*bestNodes.Add(group.masterNode);
-                    break;*/
+                    bestNodes.Add(group.masterNode);
+                    break;
                     foreach (object obj in group.Elems)
                     {
                         if (obj.GetType() == typeof(Node<T>))
@@ -1370,16 +1390,13 @@ namespace RTree
         /// <returns>재 계산이 필요한 Node 집합 (dirtyNodes)</returns>
         private List<Node<T>> RemoveGroupByTheta(Point q)
         {
-            /*System.Diagnostics.Debug.WriteLine("RemoveGroupByTheta Candidate Num : {0}", candidateGroups.Count);
-*/
+            if(debug)
+                System.Diagnostics.Debug.WriteLine("RemoveGroupByTheta Candidate Num : {0}", candidateGroups.Count);
             List<Node<T>> dirtyNodes = new List<Node<T>>();
 
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            List<MGroup<T>> removeGroups = new List<MGroup<T>>();
-            List<Node<T>> removeNodes = new List<Node<T>>();
-            List<int> removeElements = new List<int>();
             foreach (var group in candidateGroups)
             {
                 if (group.MinDist > theta)
@@ -1438,7 +1455,8 @@ namespace RTree
 
             sw.Stop();
 
-            //Debug.WriteLine("Remove Theta ElapsedTime : {0}", sw.ElapsedMilliseconds);
+            if (debug)
+                Debug.WriteLine("Remove Theta ElapsedTime : {0}", sw.ElapsedMilliseconds);
 
             //System.Diagnostics.Debug.Assert(sw.ElapsedMilliseconds < 2);
 
@@ -1544,8 +1562,27 @@ namespace RTree
                 if (resultGroups[kIdx].MinDist == groups[kIdx].MinDist) continue;
                 else
                 {
+                    int idx = 1;
+                    foreach (object obj in groups[kIdx].Elems)
+                    {
+                        Point p = (Point) obj;
+                        foreach (var v in nodeMap.Values)
+                        {
+                            if (v.isLeaf() == false) continue;
+                            for (int iidx = 0; iidx < v.entryCount; iidx++)
+                            {
+                                if (v.ids[iidx] == p.id)
+                                {
+                                    Debug.WriteLine("Elem {0} : p.id : {1} : Node {2}", idx, p.id, v.nodeId);
+                                }
+                            }
+                                
+                        }
+                        idx++;
+                    }
                     // 결과 집합이 optimum set이 아님
                     goldGroups = groups;
+                    this.debug = true;
                     while (true)
                     {
                         this.NearestGroup(queryPoint);
@@ -1557,7 +1594,14 @@ namespace RTree
             return true;
         }
 
-        private void MakeBestGroups(Point queryPoint, List<Node<T>> newNodes, List<Node<T>>[] invertedNewNodes, RTree<object>[] invertedElemRTrees)
+        /// <summary>
+        /// Theta combination을 이용한 Best Group 찾기
+        /// </summary>
+        /// <param name="queryPoint"></param>
+        /// <param name="newNodes"></param>
+        /// <param name="invertedNewNodes"></param>
+        /// <param name="invertedElemRTrees"></param>
+        private void MakeBestGroupsTC(Point queryPoint, List<Node<T>> newNodes, List<Node<T>>[] invertedNewNodes, RTree<object>[] invertedElemRTrees)
         {
             foreach (Node<T> node in newNodes)
             {
@@ -1568,14 +1612,16 @@ namespace RTree
                 }
                 else
                 {
-                    MakeBestGroups(queryPoint, node, invertedNewNodes, invertedElemRTrees);
+                    MakeBestGroupsTC(queryPoint, node, invertedNewNodes, invertedElemRTrees);
                 }
             }
         }
 
-        private void MakeBestGroups(Point queryPoint, Node<T> node, List<Node<T>>[] invertedNewNodes, RTree<object>[] invertedElemRTrees)
+        private void MakeBestGroupsTC(Point queryPoint, Node<T> node, List<Node<T>>[] invertedNewNodes, RTree<object>[] invertedElemRTrees)
         {
-            /*Debug.WriteLine("Make Best Groups {0}", node);*/
+            int pn = 0;
+            if (debug)
+                Debug.WriteLine("Make Best Groups {0}", node);
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
@@ -1592,6 +1638,9 @@ namespace RTree
                 }
             }
 
+            /*MGroup<T> nodeGroup = new MGroup<T>(node);
+            partialGroups.Add(nodeGroup);*/
+
             while (partialGroups.Count != 0)
             {
                 List<MGroup<T>> removePartialGroups = new List<MGroup<T>>();
@@ -1605,16 +1654,17 @@ namespace RTree
 
                     System.Diagnostics.Debug.Assert(mIdx != -1);
 
-                    foreach (object element in invertedElemRTrees[mIdx].Contains(searchArea))
+                    foreach (object element in invertedElemRTrees[mIdx].Intersects(searchArea))
                     {
                         System.Diagnostics.Debug.Assert(element != null);
-                        if (element == node) continue;
+                        //if (element == node) continue;
 
                         MGroup<T> newGroup = partialGroup.Copy();
                         AddElementToGroup(element, newGroup, mIdx);
 
                         if (newGroup.IsAllSet())
                         {
+                            pn++;
                             newGroup.GetGroupMinDist(queryPoint);
                             if (bestGroup == null || bestGroup.MinDist > newGroup.MinDist)
                             {
@@ -1623,7 +1673,6 @@ namespace RTree
                         }
                         else
                         {
-                            if (partialGroup.GetGroupMinDist(queryPoint) > theta) continue;
                             addPartialGroups.Add(newGroup);
                         }
                     }
@@ -1656,7 +1705,11 @@ namespace RTree
             
 
             sw.Stop();
-            /*Debug.WriteLine("Make Best Group Elapsed Time : {0}", sw.ElapsedMilliseconds);*/
+            if (debug)
+            { 
+                Debug.WriteLine("Make Best Group Elapsed Time : {0}", sw.ElapsedMilliseconds);
+                Debug.WriteLine("Number of partial groups : {0}", pn);
+            }
         }
 
         private void MakeObjectGroups(Point queryPoint, List<Point>[] NewObjs, RTree<Point>[] objRTrees, Node<T> openNode)
@@ -1768,8 +1821,9 @@ namespace RTree
                     partialGroups.Add(group);
                 }
             }
-            
-            /*Debug.WriteLine("Combination Object Group, Mix : {0}, Cnt : {1}", isMix, groupCnt);*/
+
+            if (debug)
+                Debug.WriteLine("Combination Object Group, Mix : {0}, Cnt : {1}", isMix, groupCnt);
         }
 
         private void InsertOpenElements(Point q, List<object> newElem)

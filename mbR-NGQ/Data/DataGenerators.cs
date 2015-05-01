@@ -20,7 +20,7 @@ namespace mbR_NGQ
                 byte category = (byte)rand.Next(m);
 
                 points[i] = new Point(x, y, category);
-                points[i].id = i;
+                points[i].id = i + 1;
             }
 
             return points;
@@ -57,7 +57,7 @@ namespace mbR_NGQ
                 else if (y > Config.maxY) continue;
 
                 points[idx] = new Point(x, y, category);
-                points[idx].id = idx;
+                points[idx].id = idx + 1;
 
                 idx++;
             }
@@ -112,7 +112,7 @@ namespace mbR_NGQ
                 else if (y > Config.maxY) continue;
 
                 points[idx] = new Point(x, y, category);
-                points[idx].id = idx;
+                points[idx].id = idx + 1;
 
                 idx++;
             }
