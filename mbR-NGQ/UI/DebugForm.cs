@@ -8,13 +8,18 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace mbR_NGQ
+namespace mbR_NGQ.UI
 {
-    public partial class Form1 : Form
+    public partial class DebugForm : Form
     {
-        public Form1()
+        public DebugForm()
         {
             InitializeComponent();
+        }
+
+        public void DebugWrite(string str)
+        {
+            richTextBox1.AppendText(str + Environment.NewLine);
         }
     }
 }
